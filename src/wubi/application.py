@@ -53,7 +53,6 @@ class Wubi(object):
             log.debug("Logfile is %s" % self.info.log_file)
             log.debug("sys.argv = %s" % sys.argv)
             self.backend = self.get_backend()
-            self.backend.remove_existing_binary()
             self.backend.fetch_basic_info()
             self.select_task()
         except Exception, err:
@@ -61,6 +60,9 @@ class Wubi(object):
                 log.info("Quitting application")
             else:
                 log.exception(err)
+                if not self.frontend:
+                    import ctypes
+                    ctypes.windll.user32.MessageBoxW(None, unicode(err), u"LLiuWin", 16)
                 if self.frontend:
                     error_messages = "\n".join([e for e in err.args if isinstance(e, basestring)])
                     self.frontend.show_error_message(_("An error occurred:\n\n%(error)s\n\nFor more information, please see the log file: %(log)s") % dict(error=error_messages, log=self.info.log_file))
@@ -116,6 +118,8 @@ class Wubi(object):
         '''
         Selects the appropriate task to perform and runs it
         '''
+        if self.info.run_task in ("cd_boot", "cd_menu"):
+            raise ValueError("ISO and CD installation are not supported by this release.")
         if self.info.run_task == "install":
             self.run_installer()
         elif self.info.run_task == "cd_boot":
@@ -140,17 +144,7 @@ class Wubi(object):
         #TBD add cd_boot mode
         if self.info.previous_target_dir \
         and os.path.isdir(self.info.previous_target_dir):
-            log.info("Already installed, running the uninstaller...")
-            self.info.uninstall_before_install = True
-            self.run_uninstaller()
-            self.backend.fetch_basic_info()
-            if self.info.previous_target_dir \
-            and os.path.isdir(self.info.previous_target_dir):
-                message = _("A previous installation was detected in %s.\nPlease uninstall that before continuing.")
-                message = message % self.info.previous_target_dir
-                log.error(message)
-                self.get_frontend().show_error_message(message)
-                self.quit()
+            raise ValueError("An installation already exists. Uninstall it explicitly before installing again.")
         log.info("Running the installer...")
         self.frontend = self.get_frontend()
         self.frontend.show_installation_settings()

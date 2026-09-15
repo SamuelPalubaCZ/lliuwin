@@ -215,6 +215,7 @@ int create_directory(char *directory_name)
 
 void print_error(char *message)
 {
+    fprintf(stderr, "Unpack error: %s\n", message);
     #ifdef DEBUG
     printf("\nERROR: %s\n", message);
     #ifdef USE_WINDOWS_FUNCTIONS
@@ -319,15 +320,8 @@ int unpack(char archive[512])
         Byte *out_buffer = 0; /* it must be 0 before first call for each new archive. */
         size_t out_buffer_size = 0;    /* it can have any value before first call (if out_buffer = 0) */
 
-        //~ for (i = db.Database.NumFolders-1; i >0; i--)
-        //~ {
-            //~ CFileItem *f = db.Database.Folders + i;
-            //~ if (!f->IsDirectory){
-            //~ } else {
-            //~ }
-        //~ }
-
-        for (i = db.Database.NumFiles-1; i >0; i--)
+        /* The native compressor lists parents first. Include entry zero. */
+        for (i = 0; i < db.Database.NumFiles; i++)
         {
             CFileItem *f = db.Database.Files + i;
             if (!f->IsDirectory){
@@ -339,13 +333,15 @@ int unpack(char archive[512])
             if (create_directory(f->Name) != 0)
             {
                 print_error("can not create directory");
+                res = SZE_FAIL;
+                break;
             }
             #ifdef DEBUG
             printf("\n");
             #endif
         }
 
-        for (i = 0; i < db.Database.NumFiles; i++)
+        for (i = 0; res == SZ_OK && i < db.Database.NumFiles; i++)
         {
             CFileItem *f = db.Database.Files + i;
             #ifdef DEBUG

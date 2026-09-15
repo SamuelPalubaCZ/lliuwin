@@ -31,19 +31,10 @@ def ajoin(*args):
     return abspath(join(*args))
 
 def compress(target_dir):
-    #TBD the 7z compressor should be properly compiled
-    cwd = os.getcwd()
-    compressor = ajoin("C:", "Program Files", "7-Zip","7z.exe")
-    if not os.path.exists(compressor):
-        compressor = ajoin("C:", "Program Files (x86)", "7-Zip","7z.exe")
-
-    cmd = '%s a -t7z -m0=lzma -mx=9 -mfb=256 -md=32m -ms=on ../archive.7z *'
-    cmd = cmd % (compressor,)
-    print cmd
-    os.chdir(target_dir)
-    subprocess.call([compressor, "a", "-t7z", "-m0=lzma", "-mx=9", "-mfb=256",
-                     "-md=32m", "-ms=on", "../archive.7z", "*"])
-    os.chdir(cwd)
+    archive = ajoin(dirname(target_dir), 'archive.7z')
+    if os.path.exists(archive):
+        os.remove(archive)
+    subprocess.check_call(['7z', 'a', '-t7z', '-m0=lzma', '-mx=9', '-ms=on', archive, '.'], cwd=target_dir)
 
 def cat(outfile, *infiles):
     fout = open(outfile, 'wb')
@@ -60,9 +51,9 @@ def make_self_extracting_exe(target_dir):
     target = ajoin(dirname(target_dir), 'application.exe')
     signature = ajoin(dirname(target_dir), 'signature')
     f = open(signature, 'wb')
-    f.write(SIGNATURE)
+    f.write(SIGNATURE.encode("ascii"))
     f.close()
-    print "Creating self extracting file %s" % target
+    print("Creating self extracting file %s" % target)
     cat(target, header, signature, archive)
 
 def add_python_interpreter(target_dir):

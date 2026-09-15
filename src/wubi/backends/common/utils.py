@@ -56,16 +56,14 @@ def run_command(command, show_window=False):
     return stdout on success or raise error
     '''
     process = spawn_command(command, show_window=show_window)
-    process.stdin.close()
-    output = process.stdout.read()
-    errormsg = process.stderr.read()
-    retval = process.wait()
+    output, errormsg = process.communicate()
+    retval = process.returncode
     if retval == 0:
         return output
     else:
         raise Exception(
             "Error executing command\n>>command=%s\n>>retval=%s\n>>stderr=%s\n>>stdout=%s"
-            % (" ".join(command), retval, output, errormsg))
+            % (" ".join(command), retval, errormsg, output))
 
 def run_nonblocking_command(command, show_window=False):
     '''

@@ -53,46 +53,19 @@ class InstallationPage(Page):
             combo = None
         return picture, label, combo
 
-    def check_disk_free_space(self):
-        if self.info.skip_size_check:
-            return
-        min_space_mb = self.info.distro.min_disk_space_mb + self.info.distro.max_iso_size/(1024**2)+ 100
-        max_space_mb = 0
-        max_space_mb2 = 0
-        for drive in self.info.drives:
-            if drive.type not in ['removable', 'hd']:
-                continue
-            max_space_mb = max(max_space_mb, drive.free_space_mb)
-            if int(drive.free_space_mb/1024) * 1000 > min_space_mb:
-                max_space_mb2 = max(max_space_mb2, drive.free_space_mb)
-        if max_space_mb < 1024:
-            message = _("Only %sMB of disk space are available.\nAt least 1024MB are required as a bare minimum. Quitting")
-            self.frontend.show_error_message(message % int(max_space_mb))
-            self.application.quit()
-        if max_space_mb2 < min_space_mb:
-            message = _("%(min_space)sMB of disk size are required for installation.\nOnly %(max_space)sMB are available.\nThe installation may fail in such circumstances.\nDo you wish to continue anyway?")
-            min_space_mb = round(min_space_mb/1000+0.5)*1024
-            message = message % dict(min_space=int(min_space_mb), max_space=int(max_space_mb))
-            if not self.frontend.ask_confirmation(message):
-                self.application.quit()
-            else:
-                self.info.skip_size_check = True
-
     def populate_drive_list(self):
-        self.check_disk_free_space()
-        min_space_mb = self.info.distro.min_disk_space_mb + self.info.distro.max_iso_size/(1024**2)+ 100
+        from wubi.backends.common.image import load_manifest, required_space
+        self.manifest = load_manifest(os.path.join(self.info.data_dir, 'image.json'))
+        minimum = required_space(self.manifest, self.manifest['minimum_disk_bytes'])
         self.drives_gb = []
         self.target_drive_list.clear()
         for drive in self.info.drives:
-            if drive.type not in ['removable', 'hd']:
-                continue
-            drive_space_mb = int(drive.free_space_mb/1024) * 1000
-            if self.info.skip_size_check \
-            or drive_space_mb > min_space_mb:
-                text = drive.path + " "
-                text += _("(%sGB free)") % (drive_space_mb/1000)
+            if drive.type == 'hd' and drive.filesystem == 'ntfs' and drive.free_space_mb * 1024**2 >= minimum:
+                text = drive.path + " (%sGB free)" % int(drive.free_space_mb / 1024)
                 self.drives_gb.append(text)
                 self.target_drive_list.add_item(text)
+        if not self.drives_gb:
+            raise ValueError("No local drive has enough free space for this image and installation.")
         self.select_default_drive()
 
     def select_default_drive(self):
@@ -112,31 +85,20 @@ class InstallationPage(Page):
         self.on_drive_change()
 
     def populate_size_list(self):
-        target_drive = self.get_drive()
+        from wubi.backends.common.image import required_space, GIB
+        drive = self.get_drive()
         self.size_list_gb = []
         self.size_list.clear()
-        i_size_list = list(range(16, 33,8)) + list(range(48, 65,16)) +list(range(96,257,32)) + list(range(384,1025,128))
-        if self.info.installation_size_mb:
-            i = int(self.info.installation_size_mb/1000)
-            if i not in i_size_list:
-               i_size_list.append(i)
-               i_size_list.sort()
-        for i in i_size_list:
-            #~ log.debug("%s < %s and %s > %s" % (i * 1000 + self.info.distro.max_iso_size/1024**2 + 100 , target_drive.free_space_mb, i * 1000 , self.info.distro.min_disk_space_mb))
-            if self.info.skip_size_check \
-            or i * 1000 >= self.info.distro.min_disk_space_mb: #use 1000 as it is more conservative
-                if i * 1000 + self.info.distro.max_iso_size/1024**2 + 100 <= (target_drive.free_space_mb)-16000: #16gb=reserved for img download and manipulation
-                    self.size_list_gb.append(i)
-                    self.size_list.add_item("%sGB" % i)
-        fullDisk=int(target_drive.free_space_mb/1000)-16
-        if fullDisk not in self.size_list_gb:
-            self.size_list_gb.append(fullDisk)
-        self.size_list.add_item("%sGB" % fullDisk)
+        if drive:
+            for size in (32, 48, 64, 96, 128, 256, 512, 1024):
+                if required_space(self.manifest, size * GIB) <= drive.free_space_mb * 1024**2:
+                    self.size_list_gb.append(size)
+                    self.size_list.add_item("%sGB" % size)
         self.select_default_size()
 
     def select_default_size(self):
         if self.info.installation_size_mb:
-            installation_size_gb = int(self.info.installation_size_mb/1000)
+            installation_size_gb = int(self.info.installation_size_mb/1024)
             for i in self.size_list_gb:
                 if i >= installation_size_gb:
                     self.size_list.set_value("%sGB" % i)
@@ -271,7 +233,7 @@ class InstallationPage(Page):
         installation_size = self.size_list.get_text()
         #using 1000 as opposed to 1024
         try:
-            installation_size = int(installation_size[:-2])*1000
+            installation_size = int(installation_size[:-2])*1024
         except:
             installation_size=0
         return installation_size
@@ -287,7 +249,7 @@ class InstallationPage(Page):
 
         bmp_file = "%s-header.bmp" % self.info.distro.name
         self.header.image.set_image(os.path.join(unicode(str(self.info.image_dir), 'mbcs'), unicode(str(bmp_file), 'mbcs')))
-        self.header.title.set_text(_("You are about to install %(distro)s-%(version)s") % dict(distro=self.info.distro.name, version=self.info.version))
+        self.header.title.set_text(_("You are about to install %(distro)s-%(version)s") % dict(distro=self.info.distro.name, version=self.info.distro.version))
         icon_file = "%s.ico" % self.info.distro.name
         self.frontend.set_icon(os.path.join(unicode(str(self.info.image_dir), 'mbcs'), unicode(str(icon_file), 'mbcs')))
         if not self.info.skip_memory_check:
@@ -314,8 +276,8 @@ class InstallationPage(Page):
         language3 = lang_country2linux_locale.get(self.info.language, None)
         language4 = language3 and language3.split('.')[0]
         language5 = language4 and language4.split('_')[0]
-        translation = gettext.translation(self.info.application_name, localedir=self.info.translations_dir, languages=[language1, language2, language3, language4, language5])
-        translation.install(unicode=True, names=[ngettext])
+        translation = gettext.translation(self.info.application_name, localedir=self.info.translations_dir, languages=[x for x in [language1, language2, language3, language4, language5] if x], fallback=True)
+        translation.install(unicode=True, names=["ngettext"])
 
     def on_drive_change(self):
         self.info.target_drive = self.get_drive()
@@ -336,12 +298,12 @@ class InstallationPage(Page):
         language = self.language_list.get_text()
         language = language2lang_country.get(language, None)
         locale = lang_country2linux_locale.get(language, self.info.locale)
-        username="lliurex"
-        password1="lliurex"
+        username=""
+        password1=""
 #        username = self.username.get_text()
 #        password1 = self.password1.get_text()
 #        password2 = self.password2.get_text()
-        error_message = ""
+        error_message = "" if drive and installation_size_mb else "Select a drive and installation size."
 #        if not username:
 #            error_message = _("Please enter a valid username.")
 #        elif username != username.lower():

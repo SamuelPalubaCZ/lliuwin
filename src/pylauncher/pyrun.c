@@ -36,6 +36,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <direct.h>
 #include "windows.h"
 #include "deletedir.h"
 #include "str.h"
@@ -54,10 +55,10 @@ main(int ac, char **av)
     char exefile[MAX_PATH];
     char originalexefile[MAX_PATH + 100];
     char targetdir[MAX_PATH];
-    const char dllfile[MAX_PATH] = "python27.dll";
+    char dllfile[MAX_PATH] = "python27.dll";
     const char pythonpath[MAX_PATH] = "lib";
-    const char pythonhome[MAX_PATH] = ".";
-    const char scriptfile[MAX_PATH] = "main.pyo";
+    char pythonhome[MAX_PATH] = ".";
+    char scriptfile[MAX_PATH] = "main.pyo";
     const char debug[4] = "Off";
     const char verbose[2] = "0";
 
@@ -122,7 +123,9 @@ main(int ac, char **av)
     return result;
 
 error:
-    MessageBox(NULL, message, "Internal error", MB_ICONERROR | MB_OK);
+    fprintf(stderr, "%s\n", message);
+    if (!getenv("LLIUWIN_SELF_TEST_RESULT"))
+        MessageBox(NULL, message, "Internal error", MB_ICONERROR | MB_OK);
     //TBD We should delete the targetdir but might be risky
     return 1;
 }

@@ -29,7 +29,6 @@ import gettext
 import glob
 import shutil
 import ConfigParser
-import btdownloader
 import downloader
 import subprocess
 
@@ -38,7 +37,6 @@ from tasklist import ThreadedTaskList, Task
 from distro import Distro
 from mappings import lang_country2linux_locale
 from utils import join_path, run_nonblocking_command, md5_password, copy_file, read_file, write_file, get_file_hash, reversed, find_line_in_file, unix_path, rm_tree, spawn_command
-from signature import verify_gpg_signature
 from wubi import errors
 from os.path import abspath
 
@@ -63,7 +61,7 @@ class Backend(object):
         self.info.image_dir = join_path(self.info.data_dir, 'images')
         self.info.translations_dir = join_path(self.info.root_dir, 'translations')
         self.info.trusted_keys = join_path(self.info.data_dir, 'trustedkeys.gpg')
-        self.info.application_icon = join_path(self.info.image_dir, self.info.application_name.capitalize() + ".ico")
+        self.info.application_icon = join_path(self.info.image_dir, 'lliuwin.ico')
         self.info.icon = self.info.application_icon
         self.info.iso_md5_hashes = {}
         log.debug('data_dir=%s' % self.info.data_dir)
@@ -73,60 +71,8 @@ class Backend(object):
         gettext.install(self.info.application_name, localedir=self.info.translations_dir, unicode=True, names=['ngettext'])
 
     def get_installation_tasklist(self):
-        self.cache_cd_path()
-        self.dimage_path = self.info.distro.diskimage
-        self.cache_img_path()
-        self.iso_path = self.info.distro.iso_path
-        # don't use diskimage for a FAT32 target directory
-        #if self.dimage_path and not self.cd_path and not self.iso_path and not self.info.target_drive.is_fat():
-        #Lliurex-Live boots from iso, Lllurex from img
-        if self.info.distro.name=='LliureX':
-            if not self.info.target_drive.is_fat():
-                 tasks = [
-                 Task(self.select_target_dir,
-                      description=_("Selecting the target directory")),
-                 Task(self.create_dir_structure,
-                      description=_("Creating the directories")),
-                 Task(self.create_uninstaller,
-                      description=_("Creating the uninstaller")),
-                 Task(self.create_preseed_diskimage,
-                      description=_("Creating a preseed file")),
-                 Task(self.copy_installation_files, description=_("Copying installation files")),
-                 Task(self.get_diskimage,
-                      description=_("Retrieving installation files")),
-                 Task(self.extract_diskimage, description=_("Extracting")),
-                 #Task(self.extract_kernel, description=_("Extracting the kernel")),
-                 Task(self.choose_disk_sizes, description=_("Choosing disk sizes")),
-                 Task(self.expand_diskimage,
-                      description=_("Expanding")),
-                 Task(self.create_swap_diskimage,
-                      description=_("Creating virtual memory")),
-                 Task(self.modify_bootloader,
-                      description=_("Adding a new bootloader entry")),
-                 Task(self.modify_grub_configuration, description=_("Setting up installation boot menu")),
-#                 Task(self.diskimage_bootloader,
-#                      description=_("Installing the bootloader")),
-            ]
-        else:
-            tasks = [
-            Task(self.select_target_dir, description=_("Selecting the target directory")),
-            Task(self.create_dir_structure, description=_("Creating the installation directories")),
-            Task(self.uncompress_target_dir, description=_("Uncompressing files")),
-            Task(self.create_uninstaller, description=_("Creating the uninstaller")),
-            Task(self.copy_installation_files, description=_("Copying installation files")),
-            Task(self.get_iso, description=_("Retrieving installation files")),
-            Task(self.extract_kernel, description=_("Extracting the kernel")),
-            Task(self.choose_disk_sizes, description=_("Choosing disk sizes")),
-            Task(self.create_preseed, description=_("Creating a preseed file")),
-            Task(self.modify_bootloader, description=_("Adding a new bootloader entry")),
-            Task(self.modify_grub_configuration, description=_("Setting up installation boot menu")),
-            Task(self.create_virtual_disks, description=_("Creating the virtual disks")),
-            Task(self.uncompress_files, description=_("Uncompressing files")),
-            Task(self.eject_cd, description=_("Ejecting the CD")),
-            ]
-        description = _("Installing %(distro)s-%(version)s") % dict(distro=self.info.distro.name, version=self.info.version)
-        tasklist = ThreadedTaskList(description=description, tasks=tasks)
-        return tasklist
+        return ThreadedTaskList(description=_("Installing Ubuntu 24.04 LTS"),
+            tasks=[Task(self.install_ubuntu, description=_("Downloading and installing verified Ubuntu image"))])
 
     def get_cdboot_tasklist(self):
         self.cache_cd_path()
@@ -155,12 +101,8 @@ class Backend(object):
         return tasklist
 
     def get_uninstallation_tasklist(self):
-        tasks = [
-            Task(self.undo_bootloader, _("Remove bootloader entry")),
-            Task(self.remove_target_dir, _("Remove target dir")),
-            Task(self.remove_registry_key, _("Remove registry key")),]
-        tasklist = ThreadedTaskList(description=_("Uninstalling %s") % self.info.previous_distro_name, tasks=tasks)
-        return tasklist
+        return ThreadedTaskList(description=_("Uninstalling Ubuntu"),
+            tasks=[Task(self.uninstall_ubuntu, description=_("Removing owned boot entries and files"))])
 
     def show_info(self):
         log.debug("Showing info")
@@ -195,9 +137,11 @@ class Backend(object):
         if not self.info.locale:
             self.info.locale = self.get_locale(self.info.language)
         self.info.total_memory_mb = self.get_total_memory_mb()
-        self.info.dimage_path, self.info.iso_distro = self.find_any_img()
-        self.info.iso_path, self.info.iso_distro = self.find_any_iso()
-        self.info.cd_path, self.info.cd_distro = self.find_any_cd()
+        self.info.dimage_path = None
+        self.info.iso_path = None
+        self.info.iso_distro = None
+        self.info.cd_path = None
+        self.info.cd_distro = None
 
     def get_distros(self):
         isolist_path = join_path(self.info.data_dir, 'isolist.ini')
@@ -276,6 +220,7 @@ class Backend(object):
         metalink_md5sums = downloader.download(url, self.info.install_dir, web_proxy=self.info.web_proxy)
         url = base_url +"/" + self.info.distro.metalink_md5sums_signature
         metalink_md5sums_signature = downloader.download(url, self.info.install_dir, web_proxy=self.info.web_proxy)
+        raise ValueError("Legacy ISO downloads are unsupported")
         if not verify_gpg_signature(metalink_md5sums, metalink_md5sums_signature, self.info.trusted_keys):
             log.error("Could not verify signature for metalink md5sums")
             return False

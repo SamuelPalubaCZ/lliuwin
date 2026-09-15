@@ -1,0 +1,13 @@
+[Unit]
+Description=Grow the LLiuWin root filesystem
+After=local-fs.target
+Before=display-manager.service
+ConditionPathExists=!/var/lib/lliuwin/root-grown
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/lliuwin-grow-root
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target
