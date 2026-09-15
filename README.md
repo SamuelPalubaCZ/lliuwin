@@ -4,6 +4,8 @@ Work in progress: Windows 10 22H2 / Windows 11 x64, UEFI and unencrypted local N
 
 **Prerelease only. Real dual boot, first-user setup, kernel update and uninstall testing is pending.** See [ROADMAP.md](ROADMAP.md) for the acceptance checklist and [UPSTREAM_AUDIT.md](UPSTREAM_AUDIT.md) for provenance and upstream findings.
 
+Build and test evidence: [Validation](VALIDATION.md).
+
 ## Build and release
 
 - Push / PR: portable regression checks, Python 2.7.18 Wine build, EXE/MSI artifact. These development installers have no released image and refuse installation.

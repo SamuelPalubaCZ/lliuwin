@@ -75,7 +75,7 @@ jobs:
           timeout 120s xvfb-run -a tools/wine msiexec /x "Z:$PWD/build/lliuwin.msi" /qn
           test ! -e "wine/drive_c/Program Files/LLiuWin/lliuwin.exe"
           mkdir -p dist
-          cp build/lliuwin.exe build/lliuwin.msi LICENSE AUTHORS README.md ROADMAP.md UPSTREAM_AUDIT.md dist/
+          cp build/lliuwin.exe build/lliuwin.msi LICENSE AUTHORS README.md ROADMAP.md UPSTREAM_AUDIT.md VALIDATION.md dist/
           git rev-parse HEAD > dist/source-commit.txt
           file dist/lliuwin.exe | grep 'PE32 executable'
           file dist/lliuwin.msi | grep 'Composite Document File'
