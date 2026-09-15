@@ -8,12 +8,14 @@ source_commit=$(git -c safe.directory="$source_root" -C "$source_root" rev-parse
 mkdir -p -- "$1"
 out=$(realpath -- "$1")
 work=$(mktemp -d)
+loop_device=
 cleanup() {
     status=$?
     trap - EXIT
     if mountpoint -q "$work/root"; then
         umount -R "$work/root" || { echo "Unmount failed: $work/root" >&2; exit 1; }
     fi
+    if [[ -n $loop_device ]]; then losetup -d "$loop_device" || exit 1; fi
     rmdir "$work/root" "$work" 2>/dev/null || true
     exit "$status"
 }
@@ -21,7 +23,8 @@ trap cleanup EXIT
 mkdir "$work/root"
 truncate -s 20G "$out/root.disk"
 mkfs.ext4 -F -L lliuwin-root "$out/root.disk"
-mount -o loop "$out/root.disk" "$work/root"
+loop_device=$(losetup --find --show "$out/root.disk")
+mount "$loop_device" "$work/root"
 root=$work/root
 debootstrap --include=ca-certificates --arch=amd64 --keyring=/usr/share/keyrings/ubuntu-archive-keyring.gpg noble "$root" https://archive.ubuntu.com/ubuntu
 cat > "$root/etc/apt/sources.list" <<'SOURCES'
@@ -51,6 +54,11 @@ mkdir -p /host /etc/gdm3
 sed -i '/^[[:space:]]*InitialSetupEnable=/d' /etc/gdm3/custom.conf
 sed -i '/^\[daemon\]/a InitialSetupEnable=true' /etc/gdm3/custom.conf
 printf 'tmpfs /tmp tmpfs defaults,nosuid,nodev 0 0\n' > /etc/fstab
+mkdir -p /etc/netplan
+printf 'network:\n  version: 2\n  renderer: NetworkManager\n' > /etc/netplan/01-lliuwin.yaml
+chmod 600 /etc/netplan/01-lliuwin.yaml
+netplan generate
+systemctl enable NetworkManager systemd-resolved
 systemctl set-default graphical.target
 CHROOT
 # apt's transitional browser packages skip snap installation in a chroot.
@@ -89,10 +97,18 @@ apt-get clean
 rm /usr/sbin/policy-rc.d
 rm -f /var/lib/dbus/machine-id
 : > /etc/machine-id
-rm -f /etc/ssh/ssh_host_*
+rm -f /etc/ssh/ssh_host_* /var/lib/systemd/random-seed
+ln -sf ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 CHROOT
 chroot "$root" dpkg-query -W > "$out/packages.txt"
 printf '%s\n' "$source_commit" > "$out/source-commit.txt"
+sync
+mount -o remount,ro "$root"
 umount -R "$root"
+losetup -d "$loop_device"
+udevadm settle
+loop_device=
+[[ -z $(losetup -j "$out/root.disk") ]] || { echo 'Image loop device is still attached' >&2; exit 1; }
+sync
 e2fsck -fn "$out/root.disk"
 echo "Image built: $out/root.disk"
