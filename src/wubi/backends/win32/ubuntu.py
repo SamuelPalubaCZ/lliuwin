@@ -34,6 +34,9 @@ def preflight(backend):
     target = info.target_drive.path.upper()
     if not re.match(r'^[A-Z]:$', target):
         raise ValueError('Invalid target drive')
+    attributes = ctypes.windll.kernel32.GetFileAttributesW(unicode(target + '\\'))
+    if attributes == -1 or attributes & 0x4000:
+        raise ValueError('The target directory is unreadable or uses EFS encryption.')
     # Numeric CIM properties avoid parsing translated manage-bde output.
     script = r'''$ErrorActionPreference='Stop';
     $drives=@('%s',$env:SystemDrive) | Select-Object -Unique;

@@ -60,7 +60,7 @@ class InstallationPage(Page):
         self.drives_gb = []
         self.target_drive_list.clear()
         for drive in self.info.drives:
-            if drive.type == 'hd' and drive.free_space_mb * 1024**2 >= minimum:
+            if drive.type == 'hd' and drive.filesystem == 'ntfs' and drive.free_space_mb * 1024**2 >= minimum:
                 text = drive.path + " (%sGB free)" % int(drive.free_space_mb / 1024)
                 self.drives_gb.append(text)
                 self.target_drive_list.add_item(text)
