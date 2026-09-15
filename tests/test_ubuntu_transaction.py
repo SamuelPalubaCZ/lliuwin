@@ -67,6 +67,43 @@ class TransactionTests(unittest.TestCase):
         self.state['bcd'] = None
         self.assertRaises(RuntimeError, ubuntu.remove_boot, self.state)
 
+class UninstallTests(unittest.TestCase):
+    def setUp(self):
+        self.base = tempfile.mkdtemp()
+        self.directory = os.path.join(self.base, 'lliuwin')
+        os.mkdir(self.directory)
+        self.neighbor = os.path.join(self.base, 'existing-lliurex.txt')
+        with open(self.neighbor, 'w') as f:
+            f.write('preserve')
+        ubuntu.save_state(self.directory, dict(schema=1, id='a'*32, bcd=None, efi=False))
+        self.original_remove = ubuntu.remove_boot
+        self.calls = []
+        ubuntu.remove_boot = lambda state: self.calls.append('boot')
+        self.backend = types.ModuleType('backend')
+        self.backend.info = types.ModuleType('info')
+        self.backend.info.previous_target_dir = self.directory
+        self.backend.remove_registry_key = lambda: self.calls.append('registry')
+    def tearDown(self):
+        ubuntu.remove_boot = self.original_remove
+        shutil.rmtree(self.base)
+    def test_removes_only_owned_directory(self):
+        ubuntu.uninstall(self.backend)
+        self.assertFalse(os.path.exists(self.directory))
+        self.assertTrue(os.path.isfile(self.neighbor))
+        self.assertEqual(self.calls, ['boot', 'registry'])
+    def test_invalid_journal_does_not_mutate(self):
+        ubuntu.save_state(self.directory, dict(schema=1, id='../other'))
+        self.assertRaises(ValueError, ubuntu.uninstall, self.backend)
+        self.assertTrue(os.path.isdir(self.directory))
+        self.assertEqual(self.calls, [])
+    def test_boot_failure_preserves_disk_and_registry(self):
+        def fail(state):
+            raise RuntimeError('BCD unavailable')
+        ubuntu.remove_boot = fail
+        self.assertRaises(RuntimeError, ubuntu.uninstall, self.backend)
+        self.assertTrue(os.path.isdir(self.directory))
+        self.assertEqual(self.calls, [])
+
 class InstallFailureTests(unittest.TestCase):
     def setUp(self):
         self.base = tempfile.mkdtemp()
