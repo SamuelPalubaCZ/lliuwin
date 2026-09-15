@@ -63,6 +63,8 @@ jobs:
           xvfb-run -a make build
           xvfb-run -a tools/pywine -m unittest discover -s tests -p test_image_transport.py -v
           xvfb-run -a tools/pywine -m unittest discover -s tests -p test_ubuntu_transaction.py -v
+          xvfb-run -a tools/wine build/wubi/pyrun.exe "Z:$(pwd)/build/wubi" "Z:$(pwd)/build/lliuwin.exe" --self-test
+          test -s build/wubi/self-test.ok
           ./generate_msi.sh
           mkdir -p dist
           cp build/lliuwin.exe build/lliuwin.msi dist/

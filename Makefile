@@ -12,19 +12,24 @@ all: build
 build: lliuwin
 
 lliuwin: lliuwin-pre-build
-	PYTHONPATH=src tools/pywine -OO src/pypack/pypack --verbose --bytecompile --outputdir=build/wubi src/main.py data build/bin build/version.py build/winboot build/translations
+	PYTHONPATH=src tools/pywine -OO src/pypack/pypack --verbose --bytecompile --outputdir=build/wubi src/main.py build/data build/bin build/version.py build/winboot build/translations
 	python3 build/pylauncher/pack.py build/wubi
 	mv build/application.exe build/lliuwin.exe
 
 lliuwinzip: lliuwin-pre-build
-	PYTHONPATH=src tools/pywine src/pypack/pypack --verbose --outputdir=build/wubi src/main.py data build/bin build/version.py build/winboot build/translations
+	PYTHONPATH=src tools/pywine src/pypack/pypack --verbose --outputdir=build/wubi src/main.py build/data build/bin build/version.py build/winboot build/translations
 	cp wine/drive_c/Python27/python.exe build/wubi #TBD
 	cd build; zip -r wubi.zip wubi
 
 lliuwin-pre-build: check_wine pylauncher winboot2 src/main.py src/wubi/*.py cpuid version.py translations
 	rm -rf build/wubi
 	rm -rf build/bin
-	cp -a blobs build/bin
+	mkdir -p build/bin
+	rm -rf build/data
+	mkdir -p build/data
+	cp data/image.json data/isolist.ini build/data/
+	cp -a data/images build/data/
+	cp LICENSE AUTHORS build/data/
 	cp wine/drive_c/windows/system32/python27.dll build/pylauncher
 	cp build/cpuid/cpuid.dll build/bin
 

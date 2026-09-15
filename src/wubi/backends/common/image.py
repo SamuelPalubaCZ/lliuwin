@@ -23,7 +23,7 @@ def load_manifest(path):
     if not re.match(r'^v[0-9][A-Za-z0-9.-]*$', manifest.get('release', '')):
         raise ValueError('This development build has no released Ubuntu image')
     for field in ('image_bytes', 'minimum_disk_bytes'):
-        if not isinstance(manifest.get(field), numbers.Integral) or not 0 < manifest[field] <= 1024 * GIB:
+        if (isinstance(manifest.get(field), bool) or not isinstance(manifest.get(field), numbers.Integral)) or not 0 < manifest[field] <= 1024 * GIB:
             raise ValueError('Invalid image size')
     if manifest['minimum_disk_bytes'] < manifest['image_bytes']:
         raise ValueError('Image cannot fit minimum disk')
@@ -37,7 +37,7 @@ def load_manifest(path):
         if not re.match(r'^ubuntu-noble-amd64\.tar\.gz\.part[0-9]{3}$', part.get('name', '')) or part['name'] in names:
             raise ValueError('Invalid or duplicate part name')
         names.add(part['name'])
-        if not isinstance(part.get('bytes'), numbers.Integral) or not 0 < part['bytes'] <= GIB:
+        if (isinstance(part.get('bytes'), bool) or not isinstance(part.get('bytes'), numbers.Integral)) or not 0 < part['bytes'] <= GIB:
             raise ValueError('Invalid part size')
         if not re.match(r'^[a-f0-9]{64}$', part.get('sha256', '')):
             raise ValueError('Invalid part digest')

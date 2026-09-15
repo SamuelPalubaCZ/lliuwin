@@ -38,5 +38,18 @@ except:
     version = "0.0"
     revision = "0"
 
+if '--self-test' in sys.argv:
+    import ssl
+    from wubi.backends.common import image
+    from wubi.backends.win32 import ubuntu
+    if sys.version_info[:3] != (2, 7, 18):
+        raise RuntimeError('Unexpected packaged Python runtime')
+    ssl.create_default_context()
+    if not os.path.isfile(os.path.join(root_dir, 'data', 'image.json')):
+        raise RuntimeError('Missing bundled image manifest')
+    with open(os.path.join(root_dir, 'self-test.ok'), 'w') as stream:
+        stream.write('Python 2.7.18, application imports, TLS and bundled manifest OK\n')
+    sys.exit(0)
+
 application = Wubi(application_name, version, revision, root_dir)
 application.run()
