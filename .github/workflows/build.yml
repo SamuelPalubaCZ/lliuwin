@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install image tools
-        run: sudo apt-get update && sudo apt-get install -y debootstrap ubuntu-keyring e2fsprogs
+        run: sudo apt-get update && sudo apt-get install -y debootstrap ubuntu-keyring e2fsprogs snapd
       - name: Build and inspect Ubuntu
         run: sudo ./generate_lliuwin_img.sh "$RUNNER_TEMP/ubuntu-image"
       - name: Package and identify image
@@ -65,6 +65,10 @@ jobs:
           xvfb-run -a tools/pywine -m unittest discover -s tests -p test_ubuntu_transaction.py -v
           xvfb-run -a tools/wine build/wubi/pyrun.exe "Z:$(pwd)/build/wubi" "Z:$(pwd)/build/lliuwin.exe" --self-test
           test -s build/wubi/self-test.ok
+          export WINEPREFIX="$PWD/wine" WINEARCH=win32 WINEDEBUG=-all
+          export LLIUWIN_SELF_TEST_RESULT="Z:$PWD/build/exe-self-test.ok"
+          timeout 120s xvfb-run -a sh -c 'wine build/lliuwin.exe --self-test; wineserver -w'
+          test -s build/exe-self-test.ok
           ./generate_msi.sh
           mkdir -p dist
           cp build/lliuwin.exe build/lliuwin.msi dist/

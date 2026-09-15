@@ -47,6 +47,11 @@ sed -i '/^\[daemon\]/a InitialSetupEnable=true' /etc/gdm3/custom.conf
 printf 'tmpfs /tmp tmpfs defaults,nosuid,nodev 0 0\n' > /etc/fstab
 systemctl set-default graphical.target
 CHROOT
+# apt's transitional browser packages skip snap installation in a chroot.
+# Native snap image preparation downloads and verifies assertions plus dependencies.
+snap prepare-image --classic --arch=amd64 --validation=enforce --snap=firefox --snap=thunderbird --snap=snap-store "" "$root"
+test -s "$root/var/lib/snapd/seed/seed.yaml"
+cp "$root/var/lib/snapd/seed/seed.yaml" "$out/snaps.yaml"
 install -m 755 "$source_root/tools/image/lliuwin-loop" "$root/etc/initramfs-tools/hooks/lliuwin-loop"
 install -m 755 "$source_root/tools/image/grow-root" "$root/usr/local/sbin/lliuwin-grow-root"
 install -m 644 "$source_root/tools/image/lliuwin-grow-root.service" "$root/etc/systemd/system/lliuwin-grow-root.service"

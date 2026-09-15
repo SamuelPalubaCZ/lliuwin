@@ -47,7 +47,7 @@ if '--self-test' in sys.argv:
     ssl.create_default_context()
     if not os.path.isfile(os.path.join(root_dir, 'data', 'image.json')):
         raise RuntimeError('Missing bundled image manifest')
-    with open(os.path.join(root_dir, 'self-test.ok'), 'w') as stream:
+    with open(os.environ.get('LLIUWIN_SELF_TEST_RESULT', os.path.join(root_dir, 'self-test.ok')), 'w') as stream:
         stream.write('Python 2.7.18, application imports, TLS and bundled manifest OK\n')
     sys.exit(0)
 
