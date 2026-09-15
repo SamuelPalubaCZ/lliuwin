@@ -98,6 +98,16 @@ def read_state(directory):
     return state
 
 
+def validate_owned_tree(directory):
+    # Python 2 rmtree follows Windows junctions; reject them before deleting anything.
+    for parent, directories, files in os.walk(directory):
+        paths = [parent] + [os.path.join(parent, name) for name in directories + files]
+        for path in paths:
+            if os.path.islink(path) or (os.name == 'nt' and
+                    ctypes.windll.kernel32.GetFileAttributesW(unicode(path)) & 0x400):
+                raise ValueError('Installation contains an unreadable path or reparse point; no files removed')
+
+
 def remove_boot(state, run=run_command):
     if state.get('bcd'):
         bcdedit = system_tool('bcdedit.exe')
@@ -181,6 +191,7 @@ boot
         save_state(directory, state)
     except BaseException:
         # Keep journal and disk if rollback fails; never silently delete recovery data.
+        validate_owned_tree(directory)
         remove_boot(state)
         backend.remove_registry_key()
         shutil.rmtree(directory)
@@ -190,6 +201,7 @@ boot
 def uninstall(backend, associated_task=None):
     directory = backend.info.previous_target_dir
     state = read_state(directory)
+    validate_owned_tree(directory)
     remove_boot(state)
     shutil.rmtree(directory)
     backend.remove_registry_key()

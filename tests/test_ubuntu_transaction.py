@@ -110,6 +110,38 @@ class UninstallTests(unittest.TestCase):
         self.assertFalse(os.path.exists(self.directory))
         self.assertTrue(os.path.isfile(self.neighbor))
         self.assertEqual(self.calls, ['boot', 'registry'])
+    def test_windows_reparse_or_unreadable_flags_block_uninstall(self):
+        original_os = ubuntu.os
+        original_windll = getattr(ubuntu.ctypes, 'windll', None)
+        fake_os = types.ModuleType('os')
+        fake_os.__dict__.update(vars(os))
+        fake_os.name = 'nt'
+        fake_windll = types.ModuleType('windll')
+        fake_windll.kernel32 = types.ModuleType('kernel32')
+        ubuntu.os = fake_os
+        ubuntu.ctypes.windll = fake_windll
+        ubuntu.unicode = str
+        try:
+            for flags in (0x400, -1):
+                fake_windll.kernel32.GetFileAttributesW = lambda path: flags
+                self.assertRaises(ValueError, ubuntu.uninstall, self.backend)
+                self.assertTrue(os.path.isdir(self.directory))
+                self.assertEqual(self.calls, [])
+        finally:
+            ubuntu.os = original_os
+            del ubuntu.unicode
+            if original_windll is None:
+                del ubuntu.ctypes.windll
+            else:
+                ubuntu.ctypes.windll = original_windll
+
+    @unittest.skipUnless(hasattr(os, 'symlink'), 'Symlink fixture requires POSIX')
+    def test_link_to_other_data_blocks_uninstall(self):
+        os.symlink(self.base, os.path.join(self.directory, 'foreign'))
+        self.assertRaises(ValueError, ubuntu.uninstall, self.backend)
+        self.assertTrue(os.path.isfile(self.neighbor))
+        self.assertEqual(self.calls, [])
+
     def test_invalid_journal_does_not_mutate(self):
         ubuntu.save_state(self.directory, dict(schema=1, id='../other'))
         self.assertRaises(ValueError, ubuntu.uninstall, self.backend)
