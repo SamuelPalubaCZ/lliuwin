@@ -3,6 +3,10 @@
 set -Eeuo pipefail
 [[ $EUID == 0 && $(uname -m) == x86_64 ]] || { echo 'Run on Linux amd64 as root' >&2; exit 1; }
 [[ $# == 1 && ! -e $1 ]] || { echo 'Usage: sudo ./generate_lliuwin_img.sh NEW_OUTPUT_DIRECTORY' >&2; exit 1; }
+# Keep temporary mounts out of host services' mount namespaces.
+if [[ ${LLIUWIN_IMAGE_NAMESPACE:-} != 1 ]]; then
+    exec unshare --mount --propagation private env LLIUWIN_IMAGE_NAMESPACE=1 "$0" "$@"
+fi
 source_root=$(cd -- "$(dirname -- "$0")" && pwd)
 source_commit=$(git -c safe.directory="$source_root" -C "$source_root" rev-parse HEAD)
 mkdir -p -- "$1"
@@ -107,8 +111,17 @@ mount -o remount,ro "$root"
 umount -R "$root"
 losetup -d "$loop_device"
 udevadm settle
+for attempt in {1..10}; do
+    [[ -z $(losetup -j "$out/root.disk") ]] && break
+    sleep 1
+done
+if [[ -n $(losetup -j "$out/root.disk") ]]; then
+    echo 'Image loop device is still attached' >&2
+    losetup -l "$loop_device"
+    findmnt -S "$loop_device" || true
+    exit 1
+fi
 loop_device=
-[[ -z $(losetup -j "$out/root.disk") ]] || { echo 'Image loop device is still attached' >&2; exit 1; }
 sync
 e2fsck -fn "$out/root.disk"
 echo "Image built: $out/root.disk"

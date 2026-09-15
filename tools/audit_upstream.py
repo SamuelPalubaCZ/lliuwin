@@ -35,6 +35,21 @@ def inspect(repo):
             'release_error': release_error,
             'runs': [{k: r.get(k) for k in ('head_sha', 'conclusion', 'event', 'html_url')} for r in runs.get('workflow_runs', [])]}
 
+def compact(data):
+    # Keep source evidence, not duplicated API profiles and aggregate patch bodies.
+    for key in ('lliurex', 'missing'):
+        compare = data[key]
+        data[key] = {k: compare[k] for k in ('html_url', 'permalink_url', 'status', 'ahead_by', 'behind_by', 'total_commits')}
+        for field in ('base_commit', 'merge_base_commit'):
+            data[key][field] = {'sha': compare[field]['sha']}
+        data[key]['commits'] = [dict(sha=c['sha'], html_url=c['html_url'],
+            commit={k: c['commit'][k] for k in ('message', 'author')}) for c in compare['commits']]
+    data['issues'] = [{k: issue[k] for k in ('number', 'title', 'state', 'html_url', 'body', 'closed_at', 'updated_at', 'pull_request') if k in issue} for issue in data['issues']]
+    for fork in data['forks']:
+        fork['branches'] = [dict(name=b['name'], commit={'sha': b['commit']['sha']}) for b in fork['branches']]
+    return data
+
+
 def main():
     data = {'date': datetime.datetime.now(datetime.timezone.utc).isoformat()}
     data['lliurex'] = api('repos/hakuna-m/wubiuefi/compare/master...lliurex:lliuwin:master')
@@ -48,7 +63,7 @@ def main():
         fork_names.update(r['full_name'] for r in rows)
     with futures.ThreadPoolExecutor(max_workers=6) as pool:
         data['forks'] = list(pool.map(inspect, sorted(fork_names)))
-    CACHE.write_text(json.dumps(data, indent=2) + '\n')
+    CACHE.write_text(json.dumps(compact(data), indent=2) + '\n')
     print('Saved %d forks and %d issue/PR records to %s' % (len(data['forks']), len(data['issues']), CACHE), flush=True)
 
 if __name__ == '__main__':
