@@ -11,6 +11,7 @@ def add(parent, tag, **attrs):
 root = E.Element('{%s}Wix' % ns)
 p = add(root, 'Product', Id=str(uuid.uuid4()), Name='LLiuWin Ubuntu Installer', Language='1033', Version='24.4.0', Manufacturer='LLiuWin contributors', UpgradeCode='4DDC206B-B635-4FA2-9ACF-A4C8BD8A9F20')
 add(p, 'Package', InstallerVersion='200', Compressed='yes', InstallScope='perMachine')
+add(p, 'MajorUpgrade', AllowSameVersionUpgrades='yes', DowngradeErrorMessage='A newer LLiuWin launcher is already installed.')
 add(p, 'Media', Id='1', Cabinet='installer.cab', EmbedCab='yes')
 d = add(p, 'Directory', Id='TARGETDIR', Name='SourceDir')
 d = add(d, 'Directory', Id='ProgramFilesFolder')

@@ -1,8 +1,8 @@
 export SHELL = sh
 PACKAGE = lliuwin
 ICON = data/images/lliuwin.ico
-VERSION = $(shell head -n 1 debian/changelog | sed -e "s/^$(PACKAGE) (\(.*\)).*/\1/g" | cut -d r -f 1)
-REVISION = $(shell head -n 1 debian/changelog | sed -e "s/^$(PACKAGE) (\(.*\)).*/\1/g" | cut -d r -f 2)
+VERSION = 24.04
+REVISION = 1
 COPYRIGHTYEAR = 2009
 AUTHOR = Agostino Russo
 EMAIL = agostino.russo@gmail.com

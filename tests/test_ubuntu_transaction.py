@@ -67,5 +67,50 @@ class TransactionTests(unittest.TestCase):
         self.state['bcd'] = None
         self.assertRaises(RuntimeError, ubuntu.remove_boot, self.state)
 
+class InstallFailureTests(unittest.TestCase):
+    def setUp(self):
+        self.base = tempfile.mkdtemp()
+        self.directory = os.path.join(self.base, 'lliuwin')
+        self.saved = (ubuntu.preflight, image.load_manifest, image.download_part, ubuntu.remove_boot)
+        self.events = []
+        class Info(object):
+            pass
+        info = Info()
+        info.data_dir = self.base
+        info.target_dir = self.directory
+        info.installation_size_mb = 32 * 1024
+        info.target_drive = Info()
+        info.target_drive.get_space = lambda: (100 * image.GIB, 100 * image.GIB)
+        self.backend = Info()
+        self.backend.info = info
+        self.backend.select_target_dir = lambda: self.events.append('select')
+        self.backend.uncompress_target_dir = lambda task: None
+        self.backend.remove_registry_key = lambda: self.events.append('registry')
+        ubuntu.preflight = lambda backend: None
+        image.load_manifest = lambda path: dict(minimum_disk_bytes=32 * image.GIB, release='v1', parts=[dict(name='part', bytes=10)])
+        def fail(*args):
+            raise IOError('Interrupted download')
+        image.download_part = fail
+        ubuntu.remove_boot = lambda state: self.events.append('boot')
+    def tearDown(self):
+        ubuntu.preflight, image.load_manifest, image.download_part, ubuntu.remove_boot = self.saved
+        shutil.rmtree(self.base)
+    def test_download_failure_rolls_back_owned_directory(self):
+        self.assertRaises(IOError, ubuntu.install, self.backend)
+        self.assertEqual(self.events, ['select', 'boot', 'registry'])
+        self.assertFalse(os.path.exists(self.directory))
+    def test_insufficient_space_never_mutates(self):
+        self.backend.info.target_drive.get_space = lambda: (100 * image.GIB, image.GIB)
+        self.assertRaises(ValueError, ubuntu.install, self.backend)
+        self.assertEqual(self.events, [])
+        self.assertFalse(os.path.exists(self.directory))
+    def test_rollback_failure_keeps_journal(self):
+        def fail(state):
+            raise RuntimeError('Cannot remove EFI entry')
+        ubuntu.remove_boot = fail
+        self.assertRaises(RuntimeError, ubuntu.install, self.backend)
+        self.assertTrue(os.path.isfile(os.path.join(self.directory, 'installation.json')))
+        self.assertNotIn('registry', self.events)
+
 if __name__ == '__main__':
     unittest.main()

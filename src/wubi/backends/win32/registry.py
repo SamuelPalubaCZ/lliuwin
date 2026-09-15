@@ -48,11 +48,14 @@ def set_value(key, subkey, attr, value):
         _winreg.SetValueEx(handle, attr, 0, 1, value)
     except Exception, err:
         log.exception("Cannot set registry key %s\\%s = %s\n%s" % (subkey, attr, value, err))
-    _winreg.CloseKey(handle)
+        raise
+    finally:
+        _winreg.CloseKey(handle)
 
 def delete_key(key, subkey):
     key = getattr(_winreg, key)
     try:
         _winreg.DeleteKey(key, subkey)
     except Exception, err:
-        log.exception("Cannot delete registry key %s\n%s" % (subkey, err))
+        if getattr(err, "winerror", None) != 2:
+            raise
