@@ -123,7 +123,9 @@ main(int ac, char **av)
     return result;
 
 error:
-    MessageBox(NULL, message, "Internal error", MB_ICONERROR | MB_OK);
+    fprintf(stderr, "%s\n", message);
+    if (!getenv("LLIUWIN_SELF_TEST_RESULT"))
+        MessageBox(NULL, message, "Internal error", MB_ICONERROR | MB_OK);
     //TBD We should delete the targetdir but might be risky
     return 1;
 }

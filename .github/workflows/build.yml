@@ -67,7 +67,7 @@ jobs:
           test -s build/wubi/self-test.ok
           export WINEPREFIX="$PWD/wine" WINEARCH=win32 WINEDEBUG=-all
           export LLIUWIN_SELF_TEST_RESULT="Z:$PWD/build/exe-self-test.ok"
-          timeout 120s xvfb-run -a sh -c 'wine build/lliuwin.exe --self-test; wineserver -w'
+          timeout 120s xvfb-run -a sh -c 'wine build/lliuwin.exe --self-test && wineserver -w'
           test -s build/exe-self-test.ok
           ./generate_msi.sh
           mkdir -p dist

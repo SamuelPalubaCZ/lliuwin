@@ -215,6 +215,7 @@ int create_directory(char *directory_name)
 
 void print_error(char *message)
 {
+    fprintf(stderr, "Unpack error: %s\n", message);
     #ifdef DEBUG
     printf("\nERROR: %s\n", message);
     #ifdef USE_WINDOWS_FUNCTIONS
