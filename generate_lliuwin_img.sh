@@ -29,6 +29,12 @@ deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] https://archive.u
 deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] https://archive.ubuntu.com/ubuntu noble-updates main restricted universe multiverse
 deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] https://security.ubuntu.com/ubuntu noble-security main restricted universe multiverse
 SOURCES
+# Boot ownership stays with the Windows installer, including during kernel updates.
+cat > "$root/etc/apt/preferences.d/lliuwin-boot-ownership" <<'PINS'
+Package: grub-pc grub-efi-amd64 grub-efi-ia32
+Pin: version *
+Pin-Priority: -1
+PINS
 for dir in dev proc sys; do mount --rbind "/$dir" "$root/$dir"; mount --make-rslave "$root/$dir"; done
 printf '#!/bin/sh\nexit 101\n' > "$root/usr/sbin/policy-rc.d"
 chmod +x "$root/usr/sbin/policy-rc.d"
@@ -64,6 +70,7 @@ printf '[Unit]\nRequires=lliuwin-grow-root.service\nAfter=lliuwin-grow-root.serv
 chroot "$root" systemctl enable lliuwin-grow-root.service
 chroot "$root" update-initramfs -u -k all
 chroot "$root" bash -eux <<'CHROOT'
+! dpkg-query -W -f='${db:Status-Status}\n' grub-pc grub-efi-amd64 grub-efi-ia32 2>/dev/null | grep '^installed$'
 test -e /boot/vmlinuz
 test -e /boot/initrd.img
 test -x /usr/libexec/gnome-initial-setup

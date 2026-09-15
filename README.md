@@ -11,7 +11,7 @@ Work in progress: Windows 10 22H2 / Windows 11 x64, UEFI and unencrypted local N
 - Push a new `v*` tag: build and check Ubuntu, split image into 1 GiB parts, bundle its manifest into EXE/MSI, verify SHA256SUMS and publish a complete prerelease. Existing releases are never overwritten. Upload failure leaves an unpublished draft for inspection.
 - MSI installs the launcher under Program Files. Run it as administrator to install Ubuntu. Remove Ubuntu using its own Windows uninstall entry before removing the MSI launcher.
 
-The image comes from signed Ubuntu noble/noble-updates/noble-security repositories, with `ubuntu-desktop`, `linux-generic` and `initramfs-tools`. Firefox, Thunderbird and the app store are staged with signed Snap Store assertions using [native `snap prepare-image`](https://ubuntu.com/docs/imagecraft/latest/how-to/pre-install-snaps/), including their dependencies. GNOME Initial Setup is intended to create the first personal account. No shared password is embedded. Native Python 2.7.18 is retained only for this transition release.
+The image comes from signed Ubuntu noble/noble-updates/noble-security repositories, with `ubuntu-desktop`, `linux-generic` and `initramfs-tools`. Firefox, Thunderbird and the app store are staged with signed Snap Store assertions using [native `snap prepare-image`](https://ubuntu.com/docs/imagecraft/latest/how-to/pre-install-snaps/), including their dependencies. GNOME Initial Setup is intended to create the first personal account. No shared password is embedded. GRUB installer packages are excluded inside the image so kernel upgrades cannot install a second bootloader over the Windows-managed entry. Native Python 2.7.18 is retained only for this transition release.
 
 ## Development
 
