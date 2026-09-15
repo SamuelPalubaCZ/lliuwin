@@ -71,7 +71,7 @@ jobs:
           test -s build/exe-self-test.ok
           ./generate_msi.sh
           mkdir -p dist
-          cp build/lliuwin.exe build/lliuwin.msi dist/
+          cp build/lliuwin.exe build/lliuwin.msi LICENSE AUTHORS README.md ROADMAP.md UPSTREAM_AUDIT.md dist/
           git rev-parse HEAD > dist/source-commit.txt
           file dist/lliuwin.exe | grep 'PE32 executable'
           file dist/lliuwin.msi | grep 'Composite Document File'

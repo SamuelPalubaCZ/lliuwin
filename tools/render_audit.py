@@ -52,7 +52,7 @@ for i in sorted(d['issues'], key=lambda i:i['number']):
         status='Upstream repair reference; new boot path uses one loopw0 and current kernel symlinks. Hardware validation pending.'
     elif n in (347,351,356,365,367,369,336):
         status='In-scope regression target: manifest transport, safe disk selection or boot preflight. Original Windows report not yet reproduced.'
-    elif any(x in t for x in ('32 bit','32-bit','arm64','windows 7','windows xp','bios','pop!','mint','kubuntu','lubuntu','xubuntu','26.04','25.10')):
+    elif any(x in t for x in ('32 bit','32-bit','arm64','windows 7','windows xp','legacy bios','pop!','mint','kubuntu','lubuntu','xubuntu','26.04','25.10')):
         status='Outside v1 platform; roadmap where applicable.'
     else:
         status='Roadmap / triage; '+('closed upstream, fix applicability requires verification.' if i['state']=='closed' else 'unreproduced upstream report.')

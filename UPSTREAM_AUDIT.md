@@ -271,7 +271,7 @@ New portable tests cover incomplete/corrupt downloads, cancellation cleanup, uns
 | [#114](https://github.com/hakuna-m/wubiuefi/pull/114) | closed PR | Formatting README in Markdown | Roadmap / triage; closed upstream, fix applicability requires verification. |
 | [#115](https://github.com/hakuna-m/wubiuefi/issues/115) | closed | Wubi 18.04.1 not see xubuntu-18.04.1-desktop-amd64.iso | Outside v1 platform; roadmap where applicable. |
 | [#116](https://github.com/hakuna-m/wubiuefi/issues/116) | closed | Wubi 18.04.1 does not see xubuntu-18.04.1-desktop-amd64.iso (#115) | Outside v1 platform; roadmap where applicable. |
-| [#117](https://github.com/hakuna-m/wubiuefi/issues/117) | open | Selected device is disabled in BIOS setup | Outside v1 platform; roadmap where applicable. |
+| [#117](https://github.com/hakuna-m/wubiuefi/issues/117) | open | Selected device is disabled in BIOS setup | Roadmap / triage; unreproduced upstream report. |
 | [#118](https://github.com/hakuna-m/wubiuefi/issues/118) | open | Use custom ISO / custom created live ISO  | Roadmap / triage; unreproduced upstream report. |
 | [#119](https://github.com/hakuna-m/wubiuefi/issues/119) | closed | boot into grub instead ubuntu 18.04.1 | Roadmap / triage; closed upstream, fix applicability requires verification. |
 | [#120](https://github.com/hakuna-m/wubiuefi/issues/120) | open | Wait for wubi 18.10 | Roadmap / triage; unreproduced upstream report. |

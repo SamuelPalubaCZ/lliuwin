@@ -60,6 +60,8 @@ def preflight(backend):
 @contextmanager
 def mounted_esp(run=run_command):
     mask = ctypes.windll.kernel32.GetLogicalDrives()
+    if not mask:
+        raise ValueError("Cannot determine mounted Windows volumes")
     letters = [chr(n + 65) for n in range(25, 3, -1) if not mask & (1 << n)]
     if not letters:
         raise ValueError('No free drive letter for the EFI system partition')

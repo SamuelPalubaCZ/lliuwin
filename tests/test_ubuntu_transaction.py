@@ -37,6 +37,25 @@ class TransactionTests(unittest.TestCase):
         ubuntu.mounted_esp = self.original_esp
         ubuntu.system_tool = self.original_tool
         shutil.rmtree(self.base)
+    def test_unreadable_or_full_drive_map_never_mounts(self):
+        original = getattr(ubuntu.ctypes, 'windll', None)
+        fake = types.ModuleType('windll')
+        fake.kernel32 = types.ModuleType('kernel32')
+        calls = []
+        ubuntu.ctypes.windll = fake
+        try:
+            for mask in (0, (1 << 26) - 1):
+                fake.kernel32.GetLogicalDrives = lambda: mask
+                with self.assertRaises(ValueError):
+                    with self.original_esp(lambda command: calls.append(command)):
+                        self.fail('Unexpected mounted ESP')
+            self.assertEqual(calls, [])
+        finally:
+            if original is None:
+                del ubuntu.ctypes.windll
+            else:
+                ubuntu.ctypes.windll = original
+
     def test_journal_and_invalid_ownership(self):
         ubuntu.save_state(self.directory, self.state)
         self.assertEqual(ubuntu.read_state(self.directory), self.state)
