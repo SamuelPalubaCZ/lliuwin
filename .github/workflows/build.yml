@@ -70,6 +70,10 @@ jobs:
           timeout 120s xvfb-run -a sh -c 'wine build/lliuwin.exe --self-test && wineserver -w'
           test -s build/exe-self-test.ok
           ./generate_msi.sh
+          timeout 120s xvfb-run -a tools/wine msiexec /i "Z:$PWD/build/lliuwin.msi" /qn
+          cmp build/lliuwin.exe "wine/drive_c/Program Files/LLiuWin/lliuwin.exe"
+          timeout 120s xvfb-run -a tools/wine msiexec /x "Z:$PWD/build/lliuwin.msi" /qn
+          test ! -e "wine/drive_c/Program Files/LLiuWin/lliuwin.exe"
           mkdir -p dist
           cp build/lliuwin.exe build/lliuwin.msi LICENSE AUTHORS README.md ROADMAP.md UPSTREAM_AUDIT.md dist/
           git rev-parse HEAD > dist/source-commit.txt
