@@ -63,7 +63,7 @@ def run_command(command, show_window=False):
     else:
         raise Exception(
             "Error executing command\n>>command=%s\n>>retval=%s\n>>stderr=%s\n>>stdout=%s"
-            % (" ".join(command), retval, output, errormsg))
+            % (" ".join(command), retval, errormsg, output))
 
 def run_nonblocking_command(command, show_window=False):
     '''

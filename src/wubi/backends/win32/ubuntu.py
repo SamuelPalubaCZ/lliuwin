@@ -154,8 +154,8 @@ def install(backend, associated_task=None):
 probe --set=hostuuid --fs-uuid ($host)
 loopback loopw0 ($host)/lliuwin/disks/root.disk
 set root=(loopw0)
-linux /vmlinuz root=UUID=$hostuuid loop=/lliuwin/disks/root.disk rootfstype=ntfs3 loopfstype=ext4 rw quiet splash
-initrd /initrd.img
+linux /boot/vmlinuz root=UUID=$hostuuid loop=/lliuwin/disks/root.disk rootfstype=ntfs3 loopfstype=ext4 rw quiet splash
+initrd /boot/initrd.img
 boot
 ''' % marker
             with open(os.path.join(destination, 'grub.cfg'), 'w') as stream:

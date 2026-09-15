@@ -144,9 +144,9 @@ Each row identifies the original purpose by its commit subject and affected path
 
 | SHA | Purpose | Decision |
 |---|---|---|
-| `1da9c1ccd10a6ec193857c953274eabdd64d5f6b` | Bump to 22.04.2 (#334)(#329) | ISO version metadata is outside the Noble image path. Kernel enumeration fixes are superseded by package-maintained `/vmlinuz` and `/initrd.img` links. Preserve upstream reference; no wholesale cherry-pick. |
-| `d1ac09f280b9e010aa78e1f3c579621bc76faba3` | GRUB fixes (#341)(#342)(#345) + Bump to 22.04.4 (#348) | ISO version metadata is outside the Noble image path. Kernel enumeration fixes are superseded by package-maintained `/vmlinuz` and `/initrd.img` links. Preserve upstream reference; no wholesale cherry-pick. |
-| `1a9452cc9dd025f961c8cdaed6f26fd6b0599575` | fix typo 22.04.4r346 | ISO version metadata is outside the Noble image path. Kernel enumeration fixes are superseded by package-maintained `/vmlinuz` and `/initrd.img` links. Preserve upstream reference; no wholesale cherry-pick. |
+| `1da9c1ccd10a6ec193857c953274eabdd64d5f6b` | Bump to 22.04.2 (#334)(#329) | ISO version metadata is outside the Noble image path. Kernel enumeration fixes are superseded by package-maintained `/boot/vmlinuz` and `/boot/initrd.img` links. Preserve upstream reference; no wholesale cherry-pick. |
+| `d1ac09f280b9e010aa78e1f3c579621bc76faba3` | GRUB fixes (#341)(#342)(#345) + Bump to 22.04.4 (#348) | ISO version metadata is outside the Noble image path. Kernel enumeration fixes are superseded by package-maintained `/boot/vmlinuz` and `/boot/initrd.img` links. Preserve upstream reference; no wholesale cherry-pick. |
+| `1a9452cc9dd025f961c8cdaed6f26fd6b0599575` | fix typo 22.04.4r346 | ISO version metadata is outside the Noble image path. Kernel enumeration fixes are superseded by package-maintained `/boot/vmlinuz` and `/boot/initrd.img` links. Preserve upstream reference; no wholesale cherry-pick. |
 
 ## Issues and pull requests
 

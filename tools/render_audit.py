@@ -41,7 +41,7 @@ for c in d['lliurex']['commits']:
     lines.append('| `'+sha+'` | '+clean(title)+' | '+clean(', '.join(files) or 'Merge ancestry')+' | '+decision+' |')
 lines += ['', '## Missing upstream commits', '', '| SHA | Purpose | Decision |', '|---|---|---|']
 for c in d['missing']['commits']:
-    lines.append('| `'+c['sha']+'` | '+clean(c['commit']['message'].splitlines()[0])+' | ISO version metadata is outside the Noble image path. Kernel enumeration fixes are superseded by package-maintained `/vmlinuz` and `/initrd.img` links. Preserve upstream reference; no wholesale cherry-pick. |')
+    lines.append('| `'+c['sha']+'` | '+clean(c['commit']['message'].splitlines()[0])+' | ISO version metadata is outside the Noble image path. Kernel enumeration fixes are superseded by package-maintained `/boot/vmlinuz` and `/boot/initrd.img` links. Preserve upstream reference; no wholesale cherry-pick. |')
 lines += ['', '## Issues and pull requests', '',
 'All '+str(len(d['issues']))+' captured open and closed records follow. Closed status alone does not establish a fix in this fork. Unless explicitly identified below, entries are roadmap/triage items and have not been reproduced. No blanket claim that every upstream issue is fixed.', '',
 'New portable tests cover incomplete/corrupt downloads, cancellation cleanup, unsafe archive entries, insufficient disk size, invalid ownership records, and EFI/BCD cleanup failures. Actual Windows symptoms, Secure Boot behavior and kernel upgrade bootability remain unverified until the planned Windows validation.', '',
