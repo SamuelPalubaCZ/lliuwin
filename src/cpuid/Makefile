@@ -1,6 +1,6 @@
 export SHELL = sh
 PROGRAM = pylauncher
-LDFLAGS = -shared -dll
+LDFLAGS = -shared
 CC = i686-w64-mingw32-gcc
 STRIP = i686-w64-mingw32-strip
 

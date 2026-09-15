@@ -56,11 +56,13 @@ jobs:
       - name: Regression checks
         run: |
           python3 -m unittest discover -s tests -p test_image_transport.py -v
+          python3 -m unittest discover -s tests -p test_ubuntu_transaction.py -v
           bash -n generate_lliuwin_img.sh tools/check_wine
       - name: Build Python 2.7.18 EXE and MSI
         run: |
           xvfb-run -a make build
           xvfb-run -a tools/pywine -m unittest discover -s tests -p test_image_transport.py -v
+          xvfb-run -a tools/pywine -m unittest discover -s tests -p test_ubuntu_transaction.py -v
           ./generate_msi.sh
           mkdir -p dist
           cp build/lliuwin.exe build/lliuwin.msi dist/

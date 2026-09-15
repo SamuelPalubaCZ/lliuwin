@@ -25,7 +25,7 @@ lliuwin-pre-build: check_wine pylauncher winboot2 src/main.py src/wubi/*.py cpui
 	rm -rf build/wubi
 	rm -rf build/bin
 	cp -a blobs build/bin
-	cp wine/drive_c/Python27/python27.dll build/pylauncher #TBD
+	cp wine/drive_c/windows/system32/python27.dll build/pylauncher
 	cp build/cpuid/cpuid.dll build/bin
 
 pot:
