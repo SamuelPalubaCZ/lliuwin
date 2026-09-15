@@ -48,8 +48,12 @@ printf 'tmpfs /tmp tmpfs defaults,nosuid,nodev 0 0\n' > /etc/fstab
 systemctl set-default graphical.target
 CHROOT
 # apt's transitional browser packages skip snap installation in a chroot.
-# Native snap image preparation downloads and verifies assertions plus dependencies.
-snap prepare-image --classic --arch=amd64 --validation=enforce --snap=firefox --snap=thunderbird --snap=snap-store "" "$root"
+# Native snap image preparation verifies assertions and this explicit dependency set.
+# A changed upstream base/provider fails the build rather than publishing an incomplete desktop.
+snap prepare-image --classic --arch=amd64 --validation=enforce \
+    --snap=firefox --snap=thunderbird --snap=snap-store \
+    --snap=core24 --snap=core22 --snap=bare --snap=mesa-2404 \
+    --snap=gnome-46-2404 --snap=gnome-42-2204 --snap=gtk-common-themes "" "$root"
 test -s "$root/var/lib/snapd/seed/seed.yaml"
 cp "$root/var/lib/snapd/seed/seed.yaml" "$out/snaps.yaml"
 install -m 755 "$source_root/tools/image/lliuwin-loop" "$root/etc/initramfs-tools/hooks/lliuwin-loop"
