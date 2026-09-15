@@ -1,0 +1,105 @@
+name: Build and prerelease
+on:
+  push:
+    branches: [master, 'codex/**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: build-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: false
+jobs:
+  image:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install image tools
+        run: sudo apt-get update && sudo apt-get install -y debootstrap ubuntu-keyring e2fsprogs
+      - name: Build and inspect Ubuntu
+        run: sudo ./generate_lliuwin_img.sh "$RUNNER_TEMP/ubuntu-image"
+      - name: Package and identify image
+        env:
+          RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v24.04-ci.{0}', github.run_number) }}
+        run: |
+          sudo chown -R "$USER:$USER" "$RUNNER_TEMP/ubuntu-image"
+          python3 tools/package_image.py "$RUNNER_TEMP/ubuntu-image" "$RELEASE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-image
+          path: ${{ runner.temp }}/ubuntu-image/*
+          compression-level: 0
+          if-no-files-found: error
+  installer:
+    needs: image
+    if: always() && (needs.image.result == 'success' || needs.image.result == 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        if: needs.image.result == 'success'
+        with:
+          name: ubuntu-image
+          path: dist
+      - name: Bundle matching manifest
+        if: needs.image.result == 'success'
+        run: cp dist/image.json data/image.json
+      - name: Install build tools
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y wine wine32:i386 xvfb mingw-w64 p7zip-full gettext wixl grub-efi-amd64-signed shim-signed sbsigntool
+      - name: Regression checks
+        run: |
+          python3 -m unittest discover -s tests -p test_image_transport.py -v
+          bash -n generate_lliuwin_img.sh tools/check_wine
+      - name: Build Python 2.7.18 EXE and MSI
+        run: |
+          xvfb-run -a make build
+          xvfb-run -a tools/pywine -m unittest discover -s tests -p test_image_transport.py -v
+          ./generate_msi.sh
+          mkdir -p dist
+          cp build/lliuwin.exe build/lliuwin.msi dist/
+          git rev-parse HEAD > dist/source-commit.txt
+          file dist/lliuwin.exe | grep 'PE32 executable'
+          file dist/lliuwin.msi | grep 'Composite Document File'
+          cd dist
+          sha256sum * > SHA256SUMS
+          sha256sum -c SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lliuwin-complete
+          path: dist/*
+          compression-level: 0
+          if-no-files-found: error
+  publish:
+    needs: [image, installer]
+    if: startsWith(github.ref, 'refs/tags/v') && needs.image.result == 'success' && needs.installer.result == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: lliuwin-complete
+          path: dist
+      - name: Verify and publish complete prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cd dist
+          sha256sum -c SHA256SUMS
+          test -s image.json && test -s packages.txt && test -s lliuwin.exe && test -s lliuwin.msi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite it' >&2
+            exit 1
+          fi
+          gh release create "$TAG" --verify-tag --draft --prerelease --title "$TAG" --notes 'Ubuntu 24.04 image build. Real Windows installation, reboot, kernel upgrade and uninstall testing is pending. This is a prerelease.'
+          gh release upload "$TAG" ./*
+          gh release edit "$TAG" --draft=false

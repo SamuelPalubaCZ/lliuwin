@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+device=$(findmnt -n -o SOURCE /)
+case "$device" in /dev/loop[0-9]*) ;; *) echo 'Root is not a loop device' >&2; exit 1;; esac
+resize2fs "$device"
+mkdir -p /var/lib/lliuwin
+touch /var/lib/lliuwin/root-grown

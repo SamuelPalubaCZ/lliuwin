@@ -5,3 +5,5 @@ tools/buildtest
 *.pyo
 .key
 data/custom-installation/packages
+/dist/
+__pycache__/

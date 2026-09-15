@@ -1,0 +1,20 @@
+#!/bin/sh
+# Persistent loop device allocation, informed by CalinGH/wubiuefi a8465ab407d8.
+# Keep changes inside the generated initramfs, not the package-owned source file.
+set -eu
+case ${1:-} in prereqs) exit 0;; esac
+. /usr/share/initramfs-tools/hook-functions
+manual_add_modules loop
+manual_add_modules ext4
+manual_add_modules ntfs3
+copy_exec /usr/sbin/losetup /sbin/losetup
+script="$DESTDIR/scripts/local"
+python3 - "$script" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+s = p.read_text()
+old = 'mount ${roflag} -o loop -t ${FSTYPE} ${LOOPFLAGS} "/host/${LOOP#/}" "${rootmnt?}"'
+assert s.count(old) == 1, 'Ubuntu loop mount changed; review before building'
+s = s.replace(old, 'LOOPDEV=$(losetup --find --show "/host/${LOOP#/}") || panic "Cannot allocate loop device"\n\tmount ${roflag} -t ${FSTYPE} ${LOOPFLAGS} "$LOOPDEV" "${rootmnt?}"')
+p.write_text(s)
+PY

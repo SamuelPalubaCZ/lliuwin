@@ -52,6 +52,14 @@ class WindowsBackend(Backend):
         log.debug('7z=%s' % self.info.iso_extractor)
         self.cache = {}
 
+    def install_ubuntu(self, associated_task=None):
+        from ubuntu import install
+        return install(self, associated_task)
+
+    def uninstall_ubuntu(self, associated_task=None):
+        from ubuntu import uninstall
+        return uninstall(self, associated_task)
+
     def fetch_host_info(self):
         log.debug("Fetching host info...")
         self.info.registry_key = self.get_registry_key()
@@ -86,15 +94,7 @@ class WindowsBackend(Backend):
         self.info.icon = join_path(self.info.target_dir, self.info.distro.name + '.ico')
 
     def uncompress_target_dir(self, associated_task):
-        if self.info.target_drive.is_fat():
-            return
-        try:
-            command = ['compact', self.info.target_dir, '/U', '/A', '/F']
-            run_command(command)
-            command = ['compact', join_path(self.info.target_dir,'*.*'), '/U', '/A', '/F']
-            run_command(command)
-        except Exception, err:
-            log.error(err)
+        run_command(['compact', self.info.target_dir, '/U', '/A', '/F'])
 
     def uncompress_files(self, associated_task):
         if self.info.target_drive.is_fat():
@@ -116,7 +116,7 @@ class WindowsBackend(Backend):
         if os.path.splitext(self.info.original_exe)[-1] == '.exe':
             log.debug('Copying uninstaller %s -> %s' % (self.info.original_exe, uninstaller_path))
             shutil.copyfile(self.info.original_exe, uninstaller_path)
-        registry.set_value('HKEY_LOCAL_MACHINE', self.info.registry_key, 'UninstallString', uninstaller_path)
+        registry.set_value('HKEY_LOCAL_MACHINE', self.info.registry_key, 'UninstallString', '"%s" --uninstall' % uninstaller_path)
         registry.set_value('HKEY_LOCAL_MACHINE', self.info.registry_key, 'InstallationDir', self.info.target_dir)
         registry.set_value('HKEY_LOCAL_MACHINE', self.info.registry_key, 'DisplayName', self.info.distro.name)
         registry.set_value('HKEY_LOCAL_MACHINE', self.info.registry_key, 'DisplayIcon', self.info.icon)
@@ -134,6 +134,10 @@ class WindowsBackend(Backend):
                 create_virtual_disk(path, size_mb)
 
     def reboot(self):
+        if self.info.target_dir:
+            from ubuntu import read_state, system_tool
+            state = read_state(self.info.target_dir)
+            run_command([system_tool('bcdedit.exe'), '/set', '{fwbootmgr}', 'bootsequence', state['bcd']])
         command = ['shutdown', '-r', '-t', '00']
         run_command(command) #TBD make async
 
@@ -258,33 +262,7 @@ class WindowsBackend(Backend):
         eject_cd(self.info.cd_path)
 
     def get_windows_version(self):
-        full_version = sys.getwindowsversion()
-        major, minor, build, platform, txt = full_version
-        #platform.platform(), platform.system(), platform.release(), platform.version()
-        if platform == 0:
-            version = 'win32'
-        elif platform == 1:
-            if major == 4:
-                if minor == 0:
-                    version = '95'
-                elif minor == 10:
-                    version = '98'
-                elif minor == 90:
-                    version = 'me'
-        elif platform == 2:
-            if major == 4:
-                version = 'nt'
-            elif major == 5:
-                if minor == 0:
-                    version = '2000'
-                elif minor == 1:
-                    version = 'xp'
-                elif minor == 2:
-                    version = '2003'
-            elif major == 6:
-                version = 'vista'
-        log.debug('windows version=%s' % version)
-        return version
+        return 'vista' if sys.getwindowsversion().major >= 6 else 'unsupported'
 
     def get_bootloader(self, windows_version):
         if windows_version in ['vista', '2008']:
@@ -320,6 +298,8 @@ class WindowsBackend(Backend):
     def get_uninstaller_path(self):
         uninstaller_path = registry.get_value('HKEY_LOCAL_MACHINE', self.info.registry_key, 'UninstallString')
         log.debug('uninstaller_path=%s' % uninstaller_path)
+        if uninstaller_path and uninstaller_path.startswith(chr(34)):
+            return uninstaller_path.split(chr(34))[1]
         return uninstaller_path
 
     def get_previous_target_dir(self):
@@ -333,9 +313,7 @@ class WindowsBackend(Backend):
         return previous_distro_name
 
     def get_registry_key(self):
-        registry_key = 'Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\'  + self.info.application_name.capitalize()
-        log.debug('registry_key=%s' % registry_key)
-        return registry_key
+        return r'Software\Microsoft\Windows\CurrentVersion\Uninstall\LLiuWinUbuntu'
 
     def get_windows_language_code(self):
         #~ windows_language_code = registry.get_value(

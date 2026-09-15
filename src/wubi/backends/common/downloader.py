@@ -78,6 +78,7 @@ def download(url, filename=None, associated_task=None, web_proxy = None):
         filename = urlgrabber.urlgrab(url, filename=filename)
     except Exception as e:
     	log.debug("ERROR downloading %s > %s" % (url, str(e)))
+        raise
         #filename = os.path.join(filename, basename)
     return filename
 
